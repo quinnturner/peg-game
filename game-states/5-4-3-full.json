@@ -1,0 +1,32 @@
+{
+  "isFirstPlayersTurn": true,
+  "rules": {
+    "adjacentRequired": true,
+    "xOnly": true,
+    "minNumOfPegsCanTake": 1,
+    "maxNumOfPegsCanTake": 2
+  },
+  "board": [
+    [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    [
+      3,
+      1,
+      1,
+      1,
+      1
+    ],
+    [
+      3,
+      3,
+      1,
+      1,
+      1
+    ]
+  ]
+}

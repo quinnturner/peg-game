@@ -1,0 +1,228 @@
+import GameRules, { MAX_X, MAX_Y, MIN_X, MIN_Y } from './game-rules';
+import GameState from './game-state';
+import GameTile from './game-tile';
+
+export default class Game {
+  private readonly rules: GameRules;
+  private readonly board: GameTile[][];
+  private isFirstPlayersTurn: boolean;
+  private numPegsLeft: number;
+
+  constructor(
+    rules: GameRules,
+    initialBoard: readonly GameTile[][],
+    isFirstPlayersTurn = true,
+  ) {
+    Game.validateRules(rules);
+
+    if (initialBoard[0].length > MAX_X) {
+      throw new Error("The board's x-axis is too large");
+    }
+    if (initialBoard[0].length < MIN_X) {
+      throw new Error("The board's x-axis is too small");
+    }
+    if (initialBoard.length > MAX_Y) {
+      throw new Error("The board's y-axis is too large");
+    }
+    if (initialBoard.length < MIN_Y) {
+      throw new Error("The board's y-axis is too small");
+    }
+
+    // Perform a defensive copy of the board to avoid accidental manipulation.
+    const len = initialBoard.length;
+    const copy = new Array<GameTile[]>(len);
+    for (let i = 0; i < len; ++i) copy[i] = initialBoard[i].slice(0);
+
+    this.rules = rules;
+    this.board = copy;
+    this.isFirstPlayersTurn = isFirstPlayersTurn;
+
+    // Calculate the number of pegs left based on the board
+    let numPegsLeft = 0;
+    copy.forEach((row) =>
+      row.forEach((tile) => {
+        if (tile === GameTile.OCCUPIED) numPegsLeft++;
+      }),
+    );
+    this.numPegsLeft = numPegsLeft;
+  }
+
+  get state(): GameState {
+    if (this.numPegsLeft !== 0) {
+      if (this.isFirstPlayersTurn) {
+        return GameState.PLAYER_ONES_TURN;
+      }
+      return GameState.PLAYER_TWOS_TURN;
+    }
+    // If the next move is for player one (after there's no pegs left),
+    // that means that player two played the last move.
+    // If player two plays the last move, player one wins.
+    if (this.isFirstPlayersTurn) {
+      return GameState.PLAYER_ONE_WINS;
+    }
+    return GameState.PLAYER_TWO_WINS;
+  }
+
+  get lengthOfX(): number {
+    return this.board[0].length;
+  }
+
+  get lengthOfY(): number {
+    return this.board.length;
+  }
+
+  get pegCount(): number {
+    return this.numPegsLeft;
+  }
+
+  static validateRules(rules: GameRules): void {
+    if (
+      !Number.isInteger(rules.maxNumOfPegsCanTake) ||
+      rules.maxNumOfPegsCanTake < 1
+    ) {
+      throw new Error(
+        `The maximum number of pegs that a player can take must be greater than or equal to 1.`,
+      );
+    }
+    if (
+      !Number.isInteger(rules.minNumOfPegsCanTake) ||
+      rules.minNumOfPegsCanTake < 1
+    ) {
+      throw new Error(
+        `The minimum number of pegs that a player can take must be greater than or equal to 1.`,
+      );
+    }
+    if (rules.maxNumOfPegsCanTake <= rules.minNumOfPegsCanTake) {
+      throw new Error(
+        `The maximum number of pegs must be greater than the minimum number of pegs that a player can take.`,
+      );
+    }
+  }
+
+  getTile(x: number, y: number): GameTile {
+    return this.board[y][x];
+  }
+
+  validateMoves(moves: readonly { x: number; y: number }[]): void {
+    const {
+      adjacentRequired,
+      maxNumOfPegsCanTake,
+      minNumOfPegsCanTake,
+      xOnly,
+    } = this.rules;
+    if (moves.length < minNumOfPegsCanTake) {
+      throw new Error(
+        `Illegal move: move count must be at least ${minNumOfPegsCanTake}`,
+      );
+    }
+    // Account for how many pegs are left.
+    // While this would have automatically been caught later,
+    // this error message makes a bit more sense and is convenient.
+    if (moves.length > Math.min(this.numPegsLeft, maxNumOfPegsCanTake)) {
+      throw new Error(
+        `Illegal move: move count must be at most ${maxNumOfPegsCanTake}`,
+      );
+    }
+
+    // FIXME: Integrate the duplicate move check more naturally into the rest of the error handling.
+    if (new Set(moves.map(({ x, y }) => `${x},${y}`)).size < moves.length) {
+      throw new Error('Duplicate moves provided');
+    }
+
+    // Check if the moves are valid
+    moves.forEach(({ x, y }) => {
+      if (!Number.isInteger(x) || x < 0 || x >= this.board[0].length) {
+        throw new Error(`x out of bounds: { x: ${x}, y: ${y} }`);
+      }
+      if (!Number.isInteger(y) || y < 0 || y >= this.board.length) {
+        throw new Error(`y out of bounds: { x: ${x}, y: ${y} }`);
+      }
+      const tile = this.board[y][x];
+      switch (tile) {
+        case GameTile.OCCUPIED:
+          // valid
+          break;
+        case GameTile.NON_EXISTENT:
+          throw new Error(
+            `The game tile must be occupied to remove it: { x: ${x}, y: ${y} }. It is currently non existent.`,
+          );
+        case GameTile.VACANT:
+          throw new Error(
+            `The game tile must be occupied to remove it: { x: ${x}, y: ${y} }. It is currently vacant.`,
+          );
+      }
+    });
+
+    const sortedYs = moves.map(({ y }) => y).sort((a, b) => a - b);
+    const ySet = new Set(sortedYs);
+    if (xOnly) {
+      // yValues.size represents the number of unique y values in the moves.
+      if (ySet.size > 1) {
+        throw new Error(`Cannot take pegs from multiple rows.`);
+      }
+    }
+
+    if (adjacentRequired && moves.length > 1) {
+      // Must be either all horizontal or vertical.
+      // The move order within the moves array does not have to be sequential.
+      // This property makes it slightly harder to determine the adjacency.
+
+      const sortedXs = moves.map(({ x }) => x).sort((a, b) => a - b);
+
+      const verifyArrayIncrements = (arr: number[]): void => {
+        // If it's xOnly, it's easier to determine adjacency.
+        for (let i = 0; i < arr.length - 1; i++) {
+          // Must be ascending with a difference of one for all values
+          if (arr[i] + 1 !== arr[i + 1]) {
+            // FIXME: Better error message for adjacency violations
+            throw new Error(`Violates adjacency: ${arr[i]}, ${arr[i + 1]}`);
+          }
+        }
+      };
+
+      if (ySet.size === 1) {
+        verifyArrayIncrements(sortedXs);
+      } else if (ySet.size === moves.length) {
+        const xSet = new Set(sortedXs);
+        if (xSet.size > 1) {
+          // Invalid, at least one duplicate x value
+          // FIXME: Better error message for adjacency violations
+          throw new Error(`Violates adjacency: duplicate x-value`);
+        }
+        verifyArrayIncrements(sortedYs);
+      } else {
+        // Invalid, at least one duplicate y value
+        // FIXME: Better error message for adjacency violations
+        throw new Error(`Violates adjacency: duplicate y-value`);
+      }
+    }
+  }
+
+  move(moves: readonly { x: number; y: number }[]): void {
+    this.validateMoves(moves);
+    // The moves are valid.
+
+    moves.forEach(({ x, y }) => {
+      this.board[y][x] = GameTile.VACANT;
+    });
+
+    this.numPegsLeft -= moves.length;
+
+    // Change the player move
+    this.isFirstPlayersTurn = !this.isFirstPlayersTurn;
+  }
+
+  toJSON(): string {
+    const obj = {
+      rules: this.rules,
+      board: this.board,
+      isFirstPlayersTurn: this.isFirstPlayersTurn,
+    };
+    const val = JSON.stringify(obj);
+    return val;
+  }
+
+  print(): void {
+    console.table(this.board);
+  }
+}

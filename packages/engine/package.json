@@ -1,0 +1,39 @@
+{
+  "name": "@quinnturner/peg-game-engine",
+  "version": "1.0.0",
+  "description": "The peg game engine",
+  "repository": "git@github.com:quinnturner/peg-game.git",
+  "author": "Quinn Turner <quinnturnertech@gmail.com>",
+  "license": "MIT",
+  "private": false,
+  "main": "build/index.cjs.js",
+  "module": "build/index.esm.js",
+  "types": "build/types",
+  "scripts": {
+    "start": "rollup -c rollup.config.ts --watch",
+    "build": "rollup -c rollup.config.ts",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "lint": "eslint \"{src,test}/**/*.ts\" --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^16.0.0",
+    "@rollup/plugin-node-resolve": "^10.0.0",
+    "@types/jest": "^26.0.15",
+    "@types/node": "^14.14.9",
+    "@typescript-eslint/eslint-plugin": "^4.8.2",
+    "@typescript-eslint/parser": "^4.8.2",
+    "eslint": "^7.12.1",
+    "eslint-config-prettier": "^6.15.0",
+    "eslint-plugin-jest": "^24.1.3",
+    "eslint-plugin-prettier": "^3.1.4",
+    "jest": "^26.4.2",
+    "rollup": "^2.33.3",
+    "rollup-plugin-typescript2": "^0.29.0",
+    "ts-jest": "^26.4.4",
+    "tslib": "^2.0.1",
+    "typescript": "^4.1.2"
+  }
+}
