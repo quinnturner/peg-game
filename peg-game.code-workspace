@@ -7,6 +7,10 @@
     {
       "name": "Engine",
       "path": "./packages/engine"
+    },
+    {
+      "name": "Solver",
+      "path": "./packages/solver"
     }
   ],
   "settings": {
