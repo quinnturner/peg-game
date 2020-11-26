@@ -1,19 +1,25 @@
-import GameRules, { MAX_X, MAX_Y, MIN_X, MIN_Y } from './game-rules';
+import GameHistory from './game-history';
+import { MAX_X, MAX_Y, MIN_X, MIN_Y } from './game-rules';
 import GameState from './game-state';
-import GameTile from './game-tile';
+import GameTileState from './game-tile-state';
+import Move, { hashPartialMove } from './move';
+
+import type GameRules from './game-rules';
 
 export default class Game {
-  private readonly rules: GameRules;
-  private readonly board: GameTile[][];
-  private isFirstPlayersTurn: boolean;
-  private numPegsLeft: number;
+  readonly #rules: GameRules;
+  readonly #board: GameTileState[][];
+  #isFirstPlayersTurn: boolean;
+  #numPegsLeft: number;
+  #history: GameHistory;
 
   constructor(
-    rules: GameRules,
-    initialBoard: readonly GameTile[][],
+    rules: Readonly<GameRules>,
+    initialBoard: readonly GameTileState[][],
     isFirstPlayersTurn = true,
   ) {
-    Game.validateRules(rules);
+    this.#rules = { ...rules };
+    Game.validateRules(this.#rules);
 
     if (initialBoard[0].length > MAX_X) {
       throw new Error("The board's x-axis is too large");
@@ -30,26 +36,38 @@ export default class Game {
 
     // Perform a defensive copy of the board to avoid accidental manipulation.
     const len = initialBoard.length;
-    const copy = new Array<GameTile[]>(len);
+    const copy = new Array<GameTileState[]>(len);
     for (let i = 0; i < len; ++i) copy[i] = initialBoard[i].slice(0);
 
-    this.rules = rules;
-    this.board = copy;
-    this.isFirstPlayersTurn = isFirstPlayersTurn;
+    this.#board = copy;
+    this.#isFirstPlayersTurn = isFirstPlayersTurn;
 
     // Calculate the number of pegs left based on the board
     let numPegsLeft = 0;
     copy.forEach((row) =>
       row.forEach((tile) => {
-        if (tile === GameTile.OCCUPIED) numPegsLeft++;
+        if (tile === GameTileState.OCCUPIED) numPegsLeft++;
       }),
     );
-    this.numPegsLeft = numPegsLeft;
+    this.#numPegsLeft = numPegsLeft;
+    this.#history = new GameHistory();
+  }
+
+  /**
+   * Get the rules.
+   * A defensive copy is performed to prevent manipulation.
+   */
+  get rules(): Readonly<GameRules> {
+    return this.#rules;
+  }
+
+  get board(): readonly (readonly GameTileState[])[] {
+    return this.#board;
   }
 
   get state(): GameState {
-    if (this.numPegsLeft !== 0) {
-      if (this.isFirstPlayersTurn) {
+    if (this.#numPegsLeft !== 0) {
+      if (this.#isFirstPlayersTurn) {
         return GameState.PLAYER_ONES_TURN;
       }
       return GameState.PLAYER_TWOS_TURN;
@@ -57,25 +75,25 @@ export default class Game {
     // If the next move is for player one (after there's no pegs left),
     // that means that player two played the last move.
     // If player two plays the last move, player one wins.
-    if (this.isFirstPlayersTurn) {
+    if (this.#isFirstPlayersTurn) {
       return GameState.PLAYER_ONE_WINS;
     }
     return GameState.PLAYER_TWO_WINS;
   }
 
   get lengthOfX(): number {
-    return this.board[0].length;
+    return this.#board[0].length;
   }
 
   get lengthOfY(): number {
-    return this.board.length;
+    return this.#board.length;
   }
 
   get pegCount(): number {
-    return this.numPegsLeft;
+    return this.#numPegsLeft;
   }
 
-  static validateRules(rules: GameRules): void {
+  static validateRules(rules: Readonly<GameRules>): void {
     if (
       !Number.isInteger(rules.maxNumOfPegsCanTake) ||
       rules.maxNumOfPegsCanTake < 1
@@ -99,17 +117,17 @@ export default class Game {
     }
   }
 
-  getTile(x: number, y: number): GameTile {
-    return this.board[y][x];
+  getTile(x: number, y: number): GameTileState {
+    return this.#board[y][x];
   }
 
-  validateMoves(moves: readonly { x: number; y: number }[]): void {
+  validateMoves(moves: readonly Move[]): void {
     const {
       adjacentRequired,
       maxNumOfPegsCanTake,
       minNumOfPegsCanTake,
       xOnly,
-    } = this.rules;
+    } = this.#rules;
     if (moves.length < minNumOfPegsCanTake) {
       throw new Error(
         `Illegal move: move count must be at least ${minNumOfPegsCanTake}`,
@@ -118,35 +136,37 @@ export default class Game {
     // Account for how many pegs are left.
     // While this would have automatically been caught later,
     // this error message makes a bit more sense and is convenient.
-    if (moves.length > Math.min(this.numPegsLeft, maxNumOfPegsCanTake)) {
+    if (moves.length > Math.min(this.#numPegsLeft, maxNumOfPegsCanTake)) {
       throw new Error(
         `Illegal move: move count must be at most ${maxNumOfPegsCanTake}`,
       );
     }
 
     // FIXME: Integrate the duplicate move check more naturally into the rest of the error handling.
-    if (new Set(moves.map(({ x, y }) => `${x},${y}`)).size < moves.length) {
+    if (
+      new Set(moves.map((move) => hashPartialMove(move))).size < moves.length
+    ) {
       throw new Error('Duplicate moves provided');
     }
 
     // Check if the moves are valid
     moves.forEach(({ x, y }) => {
-      if (!Number.isInteger(x) || x < 0 || x >= this.board[0].length) {
+      if (!Number.isInteger(x) || x < 0 || x >= this.#board[0].length) {
         throw new Error(`x out of bounds: { x: ${x}, y: ${y} }`);
       }
-      if (!Number.isInteger(y) || y < 0 || y >= this.board.length) {
+      if (!Number.isInteger(y) || y < 0 || y >= this.#board.length) {
         throw new Error(`y out of bounds: { x: ${x}, y: ${y} }`);
       }
-      const tile = this.board[y][x];
+      const tile = this.#board[y][x];
       switch (tile) {
-        case GameTile.OCCUPIED:
+        case GameTileState.OCCUPIED:
           // valid
           break;
-        case GameTile.NON_EXISTENT:
+        case GameTileState.NON_EXISTENT:
           throw new Error(
             `The game tile must be occupied to remove it: { x: ${x}, y: ${y} }. It is currently non existent.`,
           );
-        case GameTile.VACANT:
+        case GameTileState.VACANT:
           throw new Error(
             `The game tile must be occupied to remove it: { x: ${x}, y: ${y} }. It is currently vacant.`,
           );
@@ -198,31 +218,70 @@ export default class Game {
     }
   }
 
-  move(moves: readonly { x: number; y: number }[]): void {
-    this.validateMoves(moves);
+  peekMove(): Move[] | undefined {
+    const val = this.#history.peek();
+    if (!val) return val;
+    const moves = this.cloneMoves(val);
+    return moves;
+  }
+
+  private cloneMoves(moves: readonly Readonly<Move>[]): Move[] {
+    return [...moves.map(({ x, y }) => ({ x, y }))];
+  }
+
+  move(moves: readonly Readonly<Move>[]): void {
+    // Defensive copy (deep clone) of the moves to prevent modification after passing.
+    // This is particularly important to protect the integrity of the move history.
+    // For an example of what that means, you can view the test:
+    // `cannot change the history after a move has been played`
+    const movesCopy = this.cloneMoves(moves);
+
+    this.validateMoves(movesCopy);
     // The moves are valid.
 
-    moves.forEach(({ x, y }) => {
-      this.board[y][x] = GameTile.VACANT;
+    movesCopy.forEach(({ x, y }) => {
+      this.#board[y][x] = GameTileState.VACANT;
     });
 
-    this.numPegsLeft -= moves.length;
+    // Add the move to the history
+    this.#history.push(movesCopy);
+
+    // Remove the pegs
+    this.#numPegsLeft -= moves.length;
 
     // Change the player move
-    this.isFirstPlayersTurn = !this.isFirstPlayersTurn;
+    this.#isFirstPlayersTurn = !this.#isFirstPlayersTurn;
+  }
+
+  undo(): Move[] | undefined {
+    // Remove the move to the history
+    const moves = this.#history.pop();
+    // Start of the game, nothing changes
+    if (!moves) return moves;
+
+    moves.forEach(({ x, y }) => {
+      this.#board[y][x] = GameTileState.OCCUPIED;
+    });
+
+    // Add the peg counts back
+    this.#numPegsLeft += moves.length;
+
+    // Change the player move
+    this.#isFirstPlayersTurn = !this.#isFirstPlayersTurn;
+    return moves;
   }
 
   toJSON(): string {
     const obj = {
-      rules: this.rules,
-      board: this.board,
-      isFirstPlayersTurn: this.isFirstPlayersTurn,
+      rules: this.#rules,
+      board: this.#board,
+      isFirstPlayersTurn: this.#isFirstPlayersTurn,
     };
     const val = JSON.stringify(obj);
     return val;
   }
 
   print(): void {
-    console.table(this.board);
+    console.table(this.#board);
   }
 }

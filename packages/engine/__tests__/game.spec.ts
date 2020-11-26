@@ -1,15 +1,11 @@
 import Game from '../src/game';
-import GameRules, { MAX_X, MAX_Y } from '../src/game-rules';
+import { MAX_X, MAX_Y } from '../src/game-rules';
 import GameState from '../src/game-state';
-import GameTile from '../src/game-tile';
+import GameTileState from '../src/game-tile-state';
 
-// This is the "base game"
-// gameTiles[y][x]
-const gameTiles1: GameTile[][] = [
-  [1, 1, 1, 1, 1],
-  [3, 1, 1, 1, 1],
-  [3, 3, 1, 1, 1],
-];
+import type GameRules from '../src/game-rules';
+import { boardTrapezoid5x3 } from '../src/game-boards';
+import Move from '../src/move';
 
 describe(`A non-adjacent game`, () => {
   it(`can create and play a game with x-only and non-adjacent rules`, () => {
@@ -20,21 +16,30 @@ describe(`A non-adjacent game`, () => {
       xOnly: true,
     };
 
-    const game = new Game(nonAdjacentRules, gameTiles1, true);
+    const game = new Game(nonAdjacentRules, boardTrapezoid5x3);
 
     // First, check base case, simple single moves
 
-    expect(game.lengthOfX).toBe(gameTiles1[0].length);
-    expect(game.lengthOfY).toBe(gameTiles1.length);
+    expect(game.lengthOfX).toBe(boardTrapezoid5x3[0].length);
+    expect(game.lengthOfY).toBe(boardTrapezoid5x3.length);
     expect(game.pegCount).toBe(12);
+    // Ensure the board is good
+    const gameBoard = game.board;
+    expect(gameBoard).toHaveLength(boardTrapezoid5x3.length);
+    expect(gameBoard[0]).toHaveLength(boardTrapezoid5x3[0].length);
+    for (let y = 0; y < boardTrapezoid5x3.length; y++) {
+      for (let x = 0; x < boardTrapezoid5x3[0].length; x++) {
+        expect(gameBoard[y][x]).toBe(boardTrapezoid5x3[y][x]);
+      }
+    }
 
     expect(game.state).toBe(GameState.PLAYER_ONES_TURN);
     game.move([{ x: 0, y: 0 }]);
     expect(game.state).toBe(GameState.PLAYER_TWOS_TURN);
-    expect(game.getTile(0, 0)).toBe(GameTile.VACANT);
+    expect(game.getTile(0, 0)).toBe(GameTileState.VACANT);
     game.move([{ x: 1, y: 0 }]);
     expect(game.state).toBe(GameState.PLAYER_ONES_TURN);
-    expect(game.getTile(1, 0)).toBe(GameTile.VACANT);
+    expect(game.getTile(1, 0)).toBe(GameTileState.VACANT);
 
     // Next, try two legal double moves
 
@@ -43,15 +48,15 @@ describe(`A non-adjacent game`, () => {
       { x: 3, y: 0 },
     ]);
     expect(game.state).toBe(GameState.PLAYER_TWOS_TURN);
-    expect(game.getTile(2, 0)).toBe(GameTile.VACANT);
-    expect(game.getTile(3, 0)).toBe(GameTile.VACANT);
+    expect(game.getTile(2, 0)).toBe(GameTileState.VACANT);
+    expect(game.getTile(3, 0)).toBe(GameTileState.VACANT);
     game.move([
       { x: 1, y: 1 },
       { x: 2, y: 1 },
     ]);
     expect(game.state).toBe(GameState.PLAYER_ONES_TURN);
-    expect(game.getTile(1, 1)).toBe(GameTile.VACANT);
-    expect(game.getTile(2, 1)).toBe(GameTile.VACANT);
+    expect(game.getTile(1, 1)).toBe(GameTileState.VACANT);
+    expect(game.getTile(2, 1)).toBe(GameTileState.VACANT);
 
     // Nice! Okay, here's the current board with player one to move:
     //
@@ -181,21 +186,21 @@ describe(`An adjacent game`, () => {
       xOnly: false,
     };
 
-    const game = new Game(adjacentRules, gameTiles1, true);
+    const game = new Game(adjacentRules, boardTrapezoid5x3, true);
 
     // First, check base case, simple single moves
 
-    expect(game.lengthOfX).toBe(gameTiles1[0].length);
-    expect(game.lengthOfY).toBe(gameTiles1.length);
+    expect(game.lengthOfX).toBe(boardTrapezoid5x3[0].length);
+    expect(game.lengthOfY).toBe(boardTrapezoid5x3.length);
     expect(game.pegCount).toBe(12);
 
     expect(game.state).toBe(GameState.PLAYER_ONES_TURN);
     game.move([{ x: 0, y: 0 }]);
     expect(game.state).toBe(GameState.PLAYER_TWOS_TURN);
-    expect(game.getTile(0, 0)).toBe(GameTile.VACANT);
+    expect(game.getTile(0, 0)).toBe(GameTileState.VACANT);
     game.move([{ x: 1, y: 0 }]);
     expect(game.state).toBe(GameState.PLAYER_ONES_TURN);
-    expect(game.getTile(1, 0)).toBe(GameTile.VACANT);
+    expect(game.getTile(1, 0)).toBe(GameTileState.VACANT);
 
     // Next, try two legal adjacent double moves
 
@@ -205,15 +210,15 @@ describe(`An adjacent game`, () => {
       { x: 2, y: 0 },
     ]);
     expect(game.state).toBe(GameState.PLAYER_TWOS_TURN);
-    expect(game.getTile(2, 0)).toBe(GameTile.VACANT);
-    expect(game.getTile(3, 0)).toBe(GameTile.VACANT);
+    expect(game.getTile(2, 0)).toBe(GameTileState.VACANT);
+    expect(game.getTile(3, 0)).toBe(GameTileState.VACANT);
     game.move([
       { x: 1, y: 1 },
       { x: 2, y: 1 },
     ]);
     expect(game.state).toBe(GameState.PLAYER_ONES_TURN);
-    expect(game.getTile(1, 1)).toBe(GameTile.VACANT);
-    expect(game.getTile(2, 1)).toBe(GameTile.VACANT);
+    expect(game.getTile(1, 1)).toBe(GameTileState.VACANT);
+    expect(game.getTile(2, 1)).toBe(GameTileState.VACANT);
 
     // Nice! This probably looks familiar:
     //
@@ -353,7 +358,7 @@ describe(`An adjourned game`, () => {
       minNumOfPegsCanTake: 1,
       xOnly: false,
     };
-    const game = new Game(adjacentRules, gameTiles1, false);
+    const game = new Game(adjacentRules, boardTrapezoid5x3, false);
     expect(game.state).toBe(GameState.PLAYER_TWOS_TURN);
   });
 });
@@ -367,7 +372,11 @@ describe(`Large games`, () => {
       xOnly: false,
     };
     expect(
-      () => new Game(adjacentRules, [[GameTile.OCCUPIED], [GameTile.OCCUPIED]]),
+      () =>
+        new Game(adjacentRules, [
+          [GameTileState.OCCUPIED],
+          [GameTileState.OCCUPIED],
+        ]),
     ).toThrow();
   });
   it(`fails to create a game with too small of an y-axis`, () => {
@@ -378,7 +387,10 @@ describe(`Large games`, () => {
       xOnly: false,
     };
     expect(
-      () => new Game(adjacentRules, [new Array(MAX_X).fill(GameTile.OCCUPIED)]),
+      () =>
+        new Game(adjacentRules, [
+          new Array(MAX_X).fill(GameTileState.OCCUPIED),
+        ]),
     ).toThrow();
   });
   it(`fails to create a game with too large of a x-axis`, () => {
@@ -392,7 +404,7 @@ describe(`Large games`, () => {
       () =>
         new Game(
           adjacentRules,
-          new Array(2).fill(new Array(MAX_X + 1).fill(GameTile.OCCUPIED)),
+          new Array(2).fill(new Array(MAX_X + 1).fill(GameTileState.OCCUPIED)),
         ),
     ).toThrow();
   });
@@ -407,7 +419,10 @@ describe(`Large games`, () => {
       () =>
         new Game(
           adjacentRules,
-          new Array(MAX_Y + 1).fill([GameTile.OCCUPIED, GameTile.OCCUPIED]),
+          new Array(MAX_Y + 1).fill([
+            GameTileState.OCCUPIED,
+            GameTileState.OCCUPIED,
+          ]),
         ),
     ).toThrow();
   });
@@ -421,7 +436,7 @@ describe(`Large games`, () => {
     // 5x5 with all occupied pegs
     const game = new Game(
       adjacentRules,
-      new Array(5).fill(new Array(5).fill(GameTile.OCCUPIED)),
+      new Array(5).fill(new Array(5).fill(GameTileState.OCCUPIED)),
     );
     expect(() =>
       game.move([
@@ -431,6 +446,51 @@ describe(`Large games`, () => {
       ]),
     ).toThrow();
     expect(game.state).toBe(GameState.PLAYER_ONES_TURN);
+  });
+});
+
+describe(`Engine robustness`, () => {
+  it(`cannot change the rules after the game is created`, () => {
+    const rules: GameRules = {
+      adjacentRequired: false,
+      maxNumOfPegsCanTake: 2,
+      minNumOfPegsCanTake: 1,
+      xOnly: false,
+    };
+    const game = new Game(rules, boardTrapezoid5x3);
+    // First attempt at changing the rules, just change the initial object's values
+    rules.adjacentRequired = true;
+    // Can't change this property since it's readonly!
+    // game.rules.maxNumOfPegsCanTake = 3;
+
+    const actualRules = game.rules;
+    expect(actualRules.maxNumOfPegsCanTake).toBe(2);
+    expect(actualRules.adjacentRequired).toBe(false);
+  });
+  it(`cannot change the history after a move has been played`, () => {
+    const rules: GameRules = {
+      adjacentRequired: false,
+      maxNumOfPegsCanTake: 2,
+      minNumOfPegsCanTake: 1,
+      xOnly: false,
+    };
+    const game = new Game(rules, boardTrapezoid5x3);
+    const move: Move[] = [{ x: 1, y: 1 }];
+    game.move(move);
+    move[0].x = 2;
+    move.push({ x: 3, y: 3 });
+    expect(game.getTile(1, 1)).toBe(GameTileState.VACANT);
+    expect(game.getTile(2, 1)).toBe(GameTileState.OCCUPIED);
+    const undoneMove = game.undo();
+    expect(undoneMove).toBeDefined();
+    if (!undoneMove) return;
+    // These lines are what matters.
+    // We gotta make sure that modifying the move via move[0].x = 2
+    // doesn't change the history of the game.
+    // Otherwise, we lose the game's integrity.
+    expect(undoneMove).toHaveLength(1);
+    expect(undoneMove[0].x).toBe(1);
+    expect(undoneMove[0].y).toBe(1);
   });
 });
 
@@ -444,7 +504,7 @@ describe('Serialization', () => {
   // 5x5 with all occupied pegs
   const game = new Game(
     adjacentRules,
-    new Array(3).fill(new Array(3).fill(GameTile.OCCUPIED)),
+    new Array(3).fill(new Array(3).fill(GameTileState.OCCUPIED)),
   );
   game.move([{ x: 0, y: 0 }]);
 

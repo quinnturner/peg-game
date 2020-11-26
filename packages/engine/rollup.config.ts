@@ -1,5 +1,6 @@
 import commonjs from '@rollup/plugin-commonjs';
 import resolve from '@rollup/plugin-node-resolve';
+// import { terser } from 'rollup-plugin-terser';
 import typescript from 'rollup-plugin-typescript2';
 
 import pkg from './package.json';
@@ -10,16 +11,19 @@ export default {
     {
       file: pkg.main,
       format: 'cjs',
+      sourcemap: true,
     },
     {
       file: pkg.module,
       format: 'es',
+      sourcemap: true,
     },
   ],
   external: [],
   plugins: [
     resolve(),
     commonjs(),
+    // terser(),
     // @see https://github.com/rollup/plugins/issues/247
     // The rollup config is set up so that it will load and transpile all TypeScript files using the rollup-plugin-typescript2 plugin.
     // As of today, this one is still more suitable than the official @rollup/plugin-typescript because the latter cannot emit TypeScript definition files.
