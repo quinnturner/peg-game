@@ -11,6 +11,10 @@
     {
       "name": "Solver",
       "path": "./packages/solver"
+    },
+    {
+      "name": "Web",
+      "path": "./packages/web"
     }
   ],
   "settings": {
