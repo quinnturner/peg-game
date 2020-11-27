@@ -7,7 +7,7 @@ import {
 import dfs from '../src/dfs';
 
 describe(`The depth-first search solver`, () => {
-  it(`somehow works`, () => {
+  it(`handles a small game where the p1 searcher wins, x-and-y, adjacent`, () => {
     const rules: GameRules = {
       adjacentRequired: true,
       minNumOfPegsCanTake: 1,

@@ -24,7 +24,7 @@ function dfsHelper(
   objective: GameState.PLAYER_ONE_WINS | GameState.PLAYER_TWO_WINS,
   bfsState: BfsState,
   currentNode: MoveTreeNode,
-): Move[] {
+): void {
   // I think this is always true?
   if (currentNode.children === undefined) {
     const childMoves = getAllPossibleMoves(game.rules, game.board, game.state);
@@ -38,7 +38,7 @@ function dfsHelper(
         throw new Error(`Invalid state, the game should be over!`);
       }
       currentNode.evaluation = state;
-      return [];
+      return;
     } else {
       currentNode.children = childMoves.map((m) => ({
         // gets defined recursively
@@ -49,34 +49,38 @@ function dfsHelper(
       }));
       for (let c = 0; c < childMoves.length; c++) {
         const childMove = childMoves[c];
+        const otherPlayersObjective = getPlayersObjective(
+          game.state as GameState.PLAYER_ONES_TURN | GameState.PLAYER_TWOS_TURN,
+        );
         game.move(childMove);
         const childNode = currentNode.children[c];
         dfsHelper(game, objective, bfsState, childNode);
         const playersObjective = getPlayersObjective(
           game.state as GameState.PLAYER_ONES_TURN | GameState.PLAYER_TWOS_TURN,
         );
-        if (childNode.children && childNode.children.length > 0) {
-          if (
-            // game.state === bfsState.playersTurn &&
-            childNode.children.some((c) => c.evaluation === playersObjective)
-          ) {
-            childNode.evaluation = playersObjective;
-          } else if (
-            childNode.children.every(
-              (x) => x.evaluation === childNode.children![0].evaluation,
-            )
-          ) {
-            childNode.evaluation = childNode.children![0].evaluation;
-          } else {
-            // This happens when we break out early.
-            // console.log(bfsState);
-            console.log(childNode.evaluation);
-            // nextNode.evaluation = objective;
+        if (childNode.evaluation === undefined) {
+          if (childNode.children && childNode.children.length > 0) {
+            if (
+              childNode.children.some((c) => c.evaluation === playersObjective)
+            ) {
+              childNode.evaluation = playersObjective;
+            } else if (
+              childNode.children.every(
+                (x) => x.evaluation === childNode.children![0].evaluation,
+              )
+            ) {
+              childNode.evaluation = childNode.children![0].evaluation;
+            } else {
+              // This happens when we break out early.
+              // console.log(bfsState);
+              console.log(childNode.evaluation);
+              // nextNode.evaluation = objective;
+            }
           }
         }
         game.undo();
-        if (childNode.evaluation !== playersObjective) {
-          // exit early, we have found our objective!
+        if (childNode.evaluation === otherPlayersObjective) {
+          currentNode.evaluation = otherPlayersObjective;
           break;
         }
       }
@@ -84,7 +88,6 @@ function dfsHelper(
   } else {
     console.log('nah');
   }
-  return [];
 }
 
 export default function dfs(game: Game): Move[] {
@@ -117,7 +120,21 @@ export default function dfs(game: Game): Move[] {
     state === GameState.PLAYER_ONES_TURN
       ? GameState.PLAYER_ONE_WINS
       : GameState.PLAYER_TWO_WINS;
-  const result = dfsHelper(game, objective, bfsState, currentNode);
-
-  return result;
+  const notObjective =
+    objective === GameState.PLAYER_ONE_WINS
+      ? GameState.PLAYER_TWO_WINS
+      : GameState.PLAYER_ONE_WINS;
+  dfsHelper(game, objective, bfsState, currentNode);
+  bfsState.tree.evaluation = bfsState.tree.children?.some(
+    (c) => c.evaluation === objective,
+  )
+    ? objective
+    : notObjective;
+  if (bfsState.tree.evaluation === objective) {
+    return bfsState.tree.children?.find((c) => c.evaluation === objective)
+      ?.value!;
+  }
+  const randomVal = Math.floor(Math.random() * bfsState.tree.children!.length);
+  const randomMove = bfsState.tree.children![randomVal].value!;
+  return randomMove;
 }
