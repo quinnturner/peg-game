@@ -25,7 +25,6 @@ function dfsHelper(
   bfsState: BfsState,
   currentNode: MoveTreeNode,
 ): void {
-  // I think this is always true?
   if (currentNode.children === undefined) {
     const childMoves = getAllPossibleMoves(game.rules, game.board, game.state);
     if (childMoves.length === 0) {
@@ -70,11 +69,6 @@ function dfsHelper(
               )
             ) {
               childNode.evaluation = childNode.children![0].evaluation;
-            } else {
-              // This happens when we break out early.
-              // console.log(bfsState);
-              console.log(childNode.evaluation);
-              // nextNode.evaluation = objective;
             }
           }
         }
@@ -85,8 +79,6 @@ function dfsHelper(
         }
       }
     }
-  } else {
-    console.log('nah');
   }
 }
 
@@ -99,18 +91,10 @@ export default function dfs(game: Game): Move[] {
     return [];
   }
   const recentMove = game.peekMove();
-  // const moves = getAllPossibleMoves(rules, board, state);
   const bfsState: BfsState = {
     tree: {
       value: recentMove,
       evaluation: undefined,
-      // children: moves.map((m) => ({
-      //   // gets defined recursively
-      //   evaluation: undefined,
-      //   value: m,
-      //   // gets defined recursively
-      //   children: undefined,
-      // })),
       children: undefined,
     },
     playersTurn: state,
