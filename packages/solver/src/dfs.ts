@@ -1,18 +1,8 @@
 import { Game, GameState, Move } from '@quinnturner/peg-game-engine';
 
 import { getAllPossibleMoves } from './mechanics';
+import MoveTreeNode from './move-tree-node';
 import { getOtherPlayersObjective, getPlayersObjective } from './objective';
-
-type Evaluation =
-  | GameState.PLAYER_ONE_WINS
-  | GameState.PLAYER_TWO_WINS
-  | undefined;
-
-interface MoveTreeNode {
-  value: Move[] | undefined;
-  children: Array<MoveTreeNode> | undefined;
-  evaluation: Evaluation;
-}
 
 function dfsHelper(
   game: Game,
@@ -69,7 +59,7 @@ function dfsHelper(
   }
 }
 
-export default function dfs(game: Game): Move[] {
+export default function dfs(game: Game, currentNode: MoveTreeNode): Move[] {
   const { state } = game;
   if (
     state === GameState.PLAYER_ONE_WINS ||
@@ -77,12 +67,6 @@ export default function dfs(game: Game): Move[] {
   ) {
     return [];
   }
-  const recentMove = game.peekMove();
-  const currentNode: MoveTreeNode = {
-    value: recentMove,
-    evaluation: undefined,
-    children: undefined,
-  };
   const objective = getPlayersObjective(state);
   // This will populate currentNode with evaluations and possible moves
   dfsHelper(game, objective, currentNode);

@@ -1,6 +1,7 @@
 import { boardCircle3x3, Game, GameRules } from '@quinnturner/peg-game-engine';
 
 import dfs from '../src/dfs';
+import MoveTreeNode from '../src/move-tree-node';
 
 describe(`The depth-first search solver`, () => {
   // This should pass, it just takes time
@@ -27,7 +28,8 @@ describe(`The depth-first search solver`, () => {
       xOnly: true,
     };
     const game = new Game(rules, boardCircle3x3);
-    const result = dfs(game);
+    const tree: MoveTreeNode = {};
+    const result = dfs(game, tree);
     expect(result).toBeDefined();
     // Since the first move will win, it stops its search there
     expect(result).toHaveLength(1);
