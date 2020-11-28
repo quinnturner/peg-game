@@ -1,7 +1,7 @@
 import { Game, GameState, Move } from '@quinnturner/peg-game-engine';
 
 import { getAllPossibleMoves } from './mechanics';
-import { getPlayersObjective } from './objective';
+import { getOtherPlayersObjective, getPlayersObjective } from './objective';
 
 type Evaluation =
   | GameState.PLAYER_ONE_WINS
@@ -14,22 +14,16 @@ interface MoveTreeNode {
   evaluation: Evaluation;
 }
 
-interface BfsState {
-  tree: MoveTreeNode;
-  playersTurn: GameState.PLAYER_ONES_TURN | GameState.PLAYER_TWOS_TURN;
-}
-
 function dfsHelper(
   game: Game,
   objective: GameState.PLAYER_ONE_WINS | GameState.PLAYER_TWO_WINS,
-  bfsState: BfsState,
   currentNode: MoveTreeNode,
 ): void {
   if (currentNode.children === undefined) {
     const childMoves = getAllPossibleMoves(game.rules, game.board, game.state);
     if (childMoves.length === 0) {
       // End of game!
-      const state = game.state;
+      const { state } = game;
       if (
         state === GameState.PLAYER_ONES_TURN ||
         state === GameState.PLAYER_TWOS_TURN
@@ -53,23 +47,16 @@ function dfsHelper(
         );
         game.move(childMove);
         const childNode = currentNode.children[c];
-        dfsHelper(game, objective, bfsState, childNode);
+        dfsHelper(game, objective, childNode);
         const playersObjective = getPlayersObjective(
           game.state as GameState.PLAYER_ONES_TURN | GameState.PLAYER_TWOS_TURN,
         );
-        if (childNode.evaluation === undefined) {
-          if (childNode.children && childNode.children.length > 0) {
-            if (
-              childNode.children.some((c) => c.evaluation === playersObjective)
-            ) {
-              childNode.evaluation = playersObjective;
-            } else if (
-              childNode.children.every(
-                (x) => x.evaluation === childNode.children![0].evaluation,
-              )
-            ) {
-              childNode.evaluation = childNode.children![0].evaluation;
-            }
+        const cc = childNode.children;
+        if (childNode.evaluation === undefined && cc?.length) {
+          if (cc.some((c) => c.evaluation === playersObjective)) {
+            childNode.evaluation = playersObjective;
+          } else if (cc.every((x) => x.evaluation === cc![0].evaluation)) {
+            childNode.evaluation = cc![0].evaluation;
           }
         }
         game.undo();
@@ -91,34 +78,58 @@ export default function dfs(game: Game): Move[] {
     return [];
   }
   const recentMove = game.peekMove();
-  const bfsState: BfsState = {
-    tree: {
-      value: recentMove,
-      evaluation: undefined,
-      children: undefined,
-    },
-    playersTurn: state,
+  const currentNode: MoveTreeNode = {
+    value: recentMove,
+    evaluation: undefined,
+    children: undefined,
   };
-  const currentNode = bfsState.tree;
-  const objective =
-    state === GameState.PLAYER_ONES_TURN
-      ? GameState.PLAYER_ONE_WINS
-      : GameState.PLAYER_TWO_WINS;
-  const notObjective =
-    objective === GameState.PLAYER_ONE_WINS
-      ? GameState.PLAYER_TWO_WINS
-      : GameState.PLAYER_ONE_WINS;
-  dfsHelper(game, objective, bfsState, currentNode);
-  bfsState.tree.evaluation = bfsState.tree.children?.some(
-    (c) => c.evaluation === objective,
-  )
-    ? objective
-    : notObjective;
-  if (bfsState.tree.evaluation === objective) {
-    return bfsState.tree.children?.find((c) => c.evaluation === objective)
-      ?.value!;
+  const objective = getPlayersObjective(state);
+  // This will populate currentNode with evaluations and possible moves
+  dfsHelper(game, objective, currentNode);
+
+  const { children } = currentNode;
+
+  if (!children) {
+    // This shouldn't be possible since there should be at least one legal move
+    throw new Error('No children in DFS');
   }
-  const randomVal = Math.floor(Math.random() * bfsState.tree.children!.length);
-  const randomMove = bfsState.tree.children![randomVal].value!;
-  return randomMove;
+
+  // If there's a winning node, take it (if not, it's undefined)
+  const winningNode = children.find((c) => c.evaluation === objective);
+  if (winningNode) {
+    // Weeeeeeee are the champions, my friends
+    currentNode.evaluation = objective;
+    if (!winningNode.value) {
+      // Don't think this can happen.
+      throw new Error('Winning node found but has no value for DFS evaluation');
+    }
+    return winningNode.value;
+  }
+
+  // Weeeeee'll keep on fighting 'til the end
+  const notObjective = getOtherPlayersObjective(objective);
+  currentNode.evaluation = notObjective;
+
+  // Find the non-winning move that maximized chance of a mistake by the other player
+  // without performing further traversals.
+  let incumbentWinPercentage = -1;
+  let incumbentWinIndex = -1;
+  for (let childIndex = 0; childIndex < children.length; childIndex++) {
+    const currentChild = children[childIndex];
+    // Note, this is only an estimate.
+    // Many of the evaluations will be undefined since the DFS will halt
+    // when it finds a winning move for the opponent.
+    const winningCount = currentChild.children!.reduce(
+      (total, c) => (c.evaluation === objective ? total + 1 : total),
+      0,
+    );
+    const winningPercentage = winningCount / currentChild.children!.length;
+    if (winningPercentage > incumbentWinPercentage) {
+      incumbentWinPercentage = winningPercentage;
+      incumbentWinIndex = childIndex;
+    }
+  }
+  const incumbentNode = children[incumbentWinIndex];
+  const incumbentMove = incumbentNode.value!;
+  return incumbentMove;
 }
