@@ -36,6 +36,14 @@ export const boardTriangle3x3: GameTileState[][] = [
   [3, 3, 1],
 ];
 
+export const boardTriangle5x5: GameTileState[][] = [
+  [1, 1, 1, 1, 1],
+  [3, 1, 1, 1, 1],
+  [3, 3, 1, 1, 1],
+  [3, 3, 3, 1, 1],
+  [3, 3, 3, 3, 1],
+];
+
 export const boardCircle3x3: GameTileState[][] = [
   [1, 1, 1],
   [1, 3, 1],
