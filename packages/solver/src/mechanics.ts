@@ -35,17 +35,16 @@ export function getAllPossibleMoves(
   // Start with only searching for one picks (if applicable).
   // This is to avoid the edge-case of double counting in the next loops.
   for (let y = 0; y < heightOfBoard; y++) {
-    const allOnXAxis: number[] = [];
+    const allOnXAxis: Move[] = [];
     for (let x = 0; x < widthOfBoard; x++) {
       if (board[y][x] === GameTileState.OCCUPIED) {
-        allOnXAxis.push(x);
+        allOnXAxis.push({ x, y });
       }
     }
+
     for (let size = minNumOfPegsCanTake; size <= maxNumOfPegsCanTake; size++) {
       const combo = new Combination(allOnXAxis, size);
-      let comboArr: Move[][] = combo
-        .toArray()
-        .map((move) => move!.map((x) => ({ x, y })));
+      let comboArr: Move[][] = combo.toArray()! as Move[][];
       if (adjacentRequired) {
         // Remove non-adjacent
         comboArr = comboArr.filter((move) => {
@@ -65,10 +64,10 @@ export function getAllPossibleMoves(
     // Start with only searching for one picks (if applicable).
     // This is to avoid the edge-case of double counting in the next loops.
     for (let x = 0; x < widthOfBoard; x++) {
-      const allOnYAxis: number[] = [];
+      const allOnYAxis: Move[] = [];
       for (let y = 0; y < heightOfBoard; y++) {
         if (board[y][x] === GameTileState.OCCUPIED) {
-          allOnYAxis.push(y);
+          allOnYAxis.push({ x, y });
         }
       }
       for (
@@ -78,9 +77,7 @@ export function getAllPossibleMoves(
         size++
       ) {
         const combo = new Combination(allOnYAxis, size);
-        let comboArr: Move[][] = combo
-          .toArray()
-          .map((move) => move!.map((y) => ({ x, y })));
+        let comboArr: Move[][] = combo.toArray() as Move[][];
 
         if (adjacentRequired) {
           // Remove non-adjacent

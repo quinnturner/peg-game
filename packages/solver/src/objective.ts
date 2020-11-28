@@ -8,3 +8,11 @@ export function getPlayersObjective(
   }
   return GameState.PLAYER_TWO_WINS;
 }
+
+export function getOtherPlayersObjective(
+  yourObjective: GameState.PLAYER_ONE_WINS | GameState.PLAYER_TWO_WINS,
+) {
+  return yourObjective === GameState.PLAYER_ONE_WINS
+    ? GameState.PLAYER_TWO_WINS
+    : GameState.PLAYER_ONE_WINS;
+}
