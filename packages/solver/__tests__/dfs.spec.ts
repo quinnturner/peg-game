@@ -1,4 +1,8 @@
-import { boardCircle3x3, Game, GameRules } from '@quinnturner/peg-game-engine';
+import {
+  boardTrapezoid5x3,
+  Game,
+  GameRules,
+} from '@quinnturner/peg-game-engine';
 
 import dfs from '../src/dfs';
 import MoveTreeNode from '../src/move-tree-node';
@@ -27,7 +31,7 @@ describe(`The depth-first search solver`, () => {
       maxNumOfPegsCanTake: 2,
       xOnly: true,
     };
-    const game = new Game(rules, boardCircle3x3);
+    const game = new Game(rules, boardTrapezoid5x3);
     const tree: MoveTreeNode = {};
     const result = dfs(game, tree);
     expect(result).toBeDefined();
