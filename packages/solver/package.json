@@ -2,11 +2,11 @@
   "name": "@quinnturner/peg-game-solver",
   "version": "1.0.0",
   "description": "Solver for the peg game",
-  "main": "dist/index.js",
+  "main": "build/index.js",
   "license": "MIT",
   "private": false,
   "scripts": {
-    "start": "tsc --watch",
+    "start": "tsc -p tsconfig.build.json --watch",
     "build": "tsc -p tsconfig.build.json",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",

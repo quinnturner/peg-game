@@ -4,6 +4,7 @@
     "moduleResolution": "node",
     "strict": true,
     "removeComments": false,
+    "declaration": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "forceConsistentCasingInFileNames": true,
