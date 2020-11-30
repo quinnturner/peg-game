@@ -7,7 +7,6 @@ import {
 export type PegState = 'OCCUPIED' | 'SELECTED' | 'VACANT';
 
 export interface PegProps {
-  key: number;
   move: Move;
   state: SelectableGameTileState;
   onClick: (
@@ -16,9 +15,9 @@ export interface PegProps {
   ) => void;
 }
 
-export function Peg({ key, state, onClick, move }: PegProps): JSX.Element {
+export function Peg({ state, onClick, move }: PegProps): JSX.Element {
   if (state === GameTileState.NON_EXISTENT) {
-    return <div key={key} className="p-8 m-1 inline"></div>;
+    return <div className="p-8 m-1 inline"></div>;
   }
 
   const bgColor =
@@ -30,7 +29,6 @@ export function Peg({ key, state, onClick, move }: PegProps): JSX.Element {
 
   return (
     <button
-      key={key}
       className={`rounded-full ${bgColor} p-8 m-1`}
       onClick={(e) => onClick(e, move)}
     ></button>
